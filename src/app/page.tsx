@@ -22,6 +22,12 @@ type ProductType = {
 const CATEGORIES = ["All", "Cotton", "Fancy", "Gadwal", "Silk", "Pattu"];
 const refreshProducts = () => fetchProducts();
 
+async function fetchProducts() {
+
+       const { data, error } = await supabase.from("products").select("*").order("id", { ascending: false });
+}
+
+
 
 
 function parseHHMMSSToSeconds(hms: string | undefined | null) {
@@ -120,6 +126,7 @@ function CountdownTimer({ countdownEnabled, countdownTime, saleEndDate, id }: {
   );
 }
 
+
 export default function Home() {
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -139,6 +146,9 @@ export default function Home() {
   const [cart, setCart] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showCart, setShowCart] = useState(false);
+
+  const [preparing, setPreparing] = useState(false);
+
   
 
   useEffect(() => {
@@ -166,12 +176,19 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [search]);
 
+  // const getDiscountedPrice = (p: ProductType) => {
+  //   const price = Number(p.price || 0);
+  //   const disc = Number(p.discount_percent || 0);
+
+  //   if (isNaN(price) || isNaN(disc) || disc <= 0) return price;
+
+  //   return Math.round(price - (price * disc) / 100);
+  // };
+
   const getDiscountedPrice = (p: ProductType) => {
     const price = Number(p.price || 0);
     const disc = Number(p.discount_percent || 0);
-
-    if (isNaN(price) || isNaN(disc) || disc <= 0) return price;
-
+    if (!disc || disc <= 0) return price;
     return Math.round(price - (price * disc) / 100);
   };
 
@@ -251,30 +268,44 @@ export default function Home() {
 
     for (let i = 0; i < cart.length; i++) {
       const p = cart[i];
-      const priceNum = Number(p.price);
-      const subtotal = priceNum * Number(p.qty);
+      // const priceNum = Number(p.price);
+      // const subtotal = priceNum * Number(p.qty);
+      const discountedPrice = getDiscountedPrice(p); // FIXED
+      const subtotal = discountedPrice * p.qty;
       total += subtotal;
 
       let shortImage = "No image";
       if (p.image_url) shortImage = await shortenURL(p.image_url);
 
-      lines.push(
+//       lines.push(
+//         `${i + 1}. *${p.name}*
+// Qty: ${p.qty}
+// Price: ₹${priceNum}
+// Subtotal: ₹${subtotal}
+// Image: ${shortImage}`
+//       );
+lines.push(
         `${i + 1}. *${p.name}*
-Qty: ${p.qty}
-Price: ₹${priceNum}
-Subtotal: ₹${subtotal}
-Image: ${shortImage}`
+        \nQty: ${p.qty}
+        \nPrice: ₹${discountedPrice}
+        \nSubtotal: ₹${subtotal}
+        \nImage: ${shortImage}`
       );
     }
 
     const gst = Math.round(total * 0.05);
     const grand = total + gst;
 
-    const message = `🛍️ *Order Details*\n\n${lines.join("\n\n")}\n\n--------------------\nTotal: ₹${total}\nGST(5%): ₹${gst}\nGrand Total: ₹${grand}`;
+    const message = `🛍️ *Order Details*\n\n${lines.join("\n\n")}\n\n--------------------\nTotal: ₹${total}\nGST(5%): ₹${gst}\nGrand Total: ₹${grand}\nPlease Send this massage to Confirm your order.`;
 
     // const phoneNumber = {whatsappNumber};
     
-    window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`);
+    // window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`);
+    // OPEN WHATSAPP IMMEDIATELY (within 100ms)
+  setTimeout(() => {
+    window.location.href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    setPreparing(false); // hide popup after redirect
+  }, 100);
   };
 
   const ShimmerCard = () => (
@@ -462,23 +493,26 @@ async function fetchWhatsappNumber() {
 
       {/* Pagination */}
       {!loading && totalItems > 0 && (
-        <div className="max-w-6xl mx-auto p-4 flex items-center justify-center gap-3">
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-3 py-1 rounded border disabled:opacity-50">
+        <div className="max-w-6xl mx-auto p-4">
+           <div className="flex items-center justify-center gap-2 overflow-x-auto whitespace-nowrap py-2">
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-2 py-0.5 text-[10px] rounded border bg-white shrink-0">
             Prev
           </button>
-
+        <div className="flex gap-1 overflow-x-auto max-w-[220px] px-1 scrollbar-hide">
           {Array.from({ length: totalPages }).map((_, i) => {
             const n = i + 1;
             return (
-              <button key={n} onClick={() => setPage(n)} className={`px-3 py-1 rounded ${n === page ? "bg-gray-800 text-white" : "border"}`}>
+              <button key={n} onClick={() => setPage(n)} className={`px-1.5 py-0.5 rounded ${n === page ? "bg-gray-800 text-white" : "border"}`}>
                 {n}
               </button>
             );
           })}
+          </div>
 
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-3 py-1 rounded border disabled:opacity-50">
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="px-2 py-0.5 text-[10px] rounded border bg-white shrink-0">
             Next
           </button>
+        </div>
         </div>
       )}
 
@@ -546,10 +580,16 @@ async function fetchWhatsappNumber() {
           </div>
         </div>
       )}
+      {preparing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white px-6 py-4 rounded-lg shadow-lg text-center">
+            <div className="animate-spin w-8 h-8 border-4 border-gray-300 border-t-green-600 rounded-full mx-auto mb-3"></div>
+            <p className="text-sm font-semibold">Preparing your WhatsApp message...</p>
+          </div>
+        </div>
+      )}
+
     </div>
   );
-}
-function fetchProducts() {
-  throw new Error("Function not implemented.");
 }
 
