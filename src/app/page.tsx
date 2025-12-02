@@ -159,7 +159,7 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
-      const { data, error } = await supabase.from("products").select("*").order("id", { ascending: false });
+      const { data, error } = await supabase.from("products").select("*").order("price", { ascending: true });
 
       if (error) throw error;
 
