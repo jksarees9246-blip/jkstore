@@ -152,7 +152,7 @@ export default function Home() {
 
 
 
-  const PAGE_SIZE = 32;
+  const PAGE_SIZE = 100;
 
   const [cart, setCart] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
