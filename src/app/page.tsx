@@ -3,6 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/app/lib/supabaseClient";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  PhoneIcon,
+  MapPinIcon,
+  EnvelopeIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { FaInstagram, FaFacebook, FaWhatsapp, FaYoutube } from "react-icons/fa";
 
 type ProductType = {
   id: number;
@@ -139,9 +146,13 @@ export default function Home() {
   const [page, setPage] = useState<number>(1);
 
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  type ModalType = "terms" | "privacy" | null;
+
+  const [openModal, setOpenModal] = useState<ModalType>(null);
 
 
-  const PAGE_SIZE = 12;
+
+  const PAGE_SIZE = 32;
 
   const [cart, setCart] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -185,6 +196,12 @@ export default function Home() {
   //   return Math.round(price - (price * disc) / 100);
   // };
 
+  // const getDiscountedPrice = (p: ProductType) => {
+  //   const price = Number(p.price || 0);
+  //   const disc = Number(p.discount_percent || 0);
+  //   if (!disc || disc <= 0) return price;
+  //   return Math.round(price - (price * disc) / 100);
+  // };
   const getDiscountedPrice = (p: ProductType) => {
     const price = Number(p.price || 0);
     const disc = Number(p.discount_percent || 0);
@@ -192,26 +209,71 @@ export default function Home() {
     return Math.round(price - (price * disc) / 100);
   };
 
+  // const filteredAndSorted = useMemo(() => {
+  //   let list = [...products];
+
+  //   if (debouncedSearch) {
+  //     const s = debouncedSearch.toLowerCase();
+  //     list = list.filter((p) => (p.name || "").toLowerCase().includes(s));
+  //   }
+
+  //   if (activeCategory !== "All") {
+  //     list = list.filter((p) => p.category === activeCategory);
+  //   }
+
+  //   if (sortOption === "price-low") {
+  //     list.sort((a, b) => Number(a.price) - Number(b.price));
+  //   } else if (sortOption === "price-high") {
+  //     list.sort((a, b) => Number(b.price) - Number(a.price));
+  //   }
+
+  //   return list;
+  // }, [products, debouncedSearch, activeCategory, sortOption]);
   const filteredAndSorted = useMemo(() => {
     let list = [...products];
 
+    // 🔍 Search
     if (debouncedSearch) {
       const s = debouncedSearch.toLowerCase();
-      list = list.filter((p) => (p.name || "").toLowerCase().includes(s));
+      list = list.filter((p) =>
+        (p.name || "").toLowerCase().includes(s)
+      );
     }
 
+    // 📂 Category
     if (activeCategory !== "All") {
       list = list.filter((p) => p.category === activeCategory);
     }
 
+    if (sortOption === "offer") {
+      list = list.filter(
+        (p) => Number(p.discount_percent) > 0
+      );
+    }
+
+    // 💰 SORT + PRICE RANGE
     if (sortOption === "price-low") {
-      list.sort((a, b) => Number(a.price) - Number(b.price));
+      list.sort((a, b) =>
+        getDiscountedPrice(a) - getDiscountedPrice(b)
+      );
     } else if (sortOption === "price-high") {
-      list.sort((a, b) => Number(b.price) - Number(a.price));
+      list.sort((a, b) =>
+        getDiscountedPrice(b) - getDiscountedPrice(a)
+      );
+    } else if (sortOption.startsWith("range-")) {
+      const [, min, max] = sortOption.split("-");
+      const minPrice = Number(min);
+      const maxPrice = Number(max);
+
+      list = list.filter((p) => {
+        const price = getDiscountedPrice(p);
+        return price >= minPrice && price <= maxPrice;
+      });
     }
 
     return list;
   }, [products, debouncedSearch, activeCategory, sortOption]);
+
 
   const totalItems = filteredAndSorted.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
@@ -249,64 +311,111 @@ export default function Home() {
     );
   };
 
-  const sendOnWhatsApp = async () => {
-    if (cart.length === 0) return;
+//   const sendOnWhatsApp = async () => {
+//     if (cart.length === 0) return;
 
-    let total = 0;
+//     let total = 0;
 
-    async function shortenURL(url: string): Promise<string> {
-      try {
-        const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
-        if (!res.ok) throw new Error();
-        return await res.text();
-      } catch {
-        return url;
-      }
-    }
+//     async function shortenURL(url: string): Promise<string> {
+//       try {
+//         const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
+//         if (!res.ok) throw new Error();
+//         return await res.text();
+//       } catch {
+//         return url;
+//       }
+//     }
 
-    const lines: string[] = [];
+//     const lines: string[] = [];
 
-    for (let i = 0; i < cart.length; i++) {
-      const p = cart[i];
-      // const priceNum = Number(p.price);
-      // const subtotal = priceNum * Number(p.qty);
-      const discountedPrice = getDiscountedPrice(p); // FIXED
-      const subtotal = discountedPrice * p.qty;
-      total += subtotal;
+//     for (let i = 0; i < cart.length; i++) {
+//       const p = cart[i];
+//       // const priceNum = Number(p.price);
+//       // const subtotal = priceNum * Number(p.qty);
+//       const discountedPrice = getDiscountedPrice(p); // FIXED
+//       const subtotal = discountedPrice * p.qty;
+//       total += subtotal;
 
-      let shortImage = "No image";
-      if (p.image_url) shortImage = await shortenURL(p.image_url);
+//       let shortImage = "No image";
+//       if (p.image_url) shortImage = await shortenURL(p.image_url);
 
-//       lines.push(
+// //       lines.push(
+// //         `${i + 1}. *${p.name}*
+// // Qty: ${p.qty}
+// // Price: ₹${priceNum}
+// // Subtotal: ₹${subtotal}
+// // Image: ${shortImage}`
+// //       );
+// lines.push(
 //         `${i + 1}. *${p.name}*
-// Qty: ${p.qty}
-// Price: ₹${priceNum}
-// Subtotal: ₹${subtotal}
-// Image: ${shortImage}`
+//         \nQty: ${p.qty}
+//         \nPrice: ₹${discountedPrice}
+//         \nSubtotal: ₹${subtotal}
+//         \nImage: ${shortImage}`
 //       );
-lines.push(
-        `${i + 1}. *${p.name}*
-        \nQty: ${p.qty}
-        \nPrice: ₹${discountedPrice}
-        \nSubtotal: ₹${subtotal}
-        \nImage: ${shortImage}`
-      );
-    }
+//     }
 
-    const gst = Math.round(total * 0.05);
-    const grand = total + gst;
+//     const gst = Math.round(total * 0.05);
+//     const grand = total + gst;
 
-    const message = `🛍️ *Order Details*\n\n${lines.join("\n\n")}\n\n--------------------\nTotal: ₹${total}\nGST(5%): ₹${gst}\nGrand Total: ₹${grand}\nPlease Send this massage to Confirm your order.`;
+//     const message = `🛍️ *Order Details*\n\n${lines.join("\n\n")}\n\n--------------------\nTotal: ₹${total}\nGST(5%): ₹${gst}\nGrand Total: ₹${grand}\nPlease Send this massage to Confirm your order.`;
 
-    // const phoneNumber = {whatsappNumber};
+//     // const phoneNumber = {whatsappNumber};
     
-    // window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`);
-    // OPEN WHATSAPP IMMEDIATELY (within 100ms)
+//     // window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`);
+//     // OPEN WHATSAPP IMMEDIATELY (within 100ms)
+//   setTimeout(() => {
+//     window.location.href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+//     setPreparing(false); // hide popup after redirect
+//   }, 100);
+//   };
+    const sendOnWhatsApp = async () => {
+  if (cart.length === 0) return;
+
+  let total = 0;
+
+  async function shortenURL(url: string): Promise<string> {
+    try {
+      const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
+      if (!res.ok) throw new Error();
+      return await res.text();
+    } catch {
+      return url;
+    }
+  }
+
+  const lines: string[] = [];
+
+  for (let i = 0; i < cart.length; i++) {
+    const p = cart[i];
+    const discountedPrice = getDiscountedPrice(p);
+    const subtotal = discountedPrice * p.qty;
+    total += subtotal;
+
+    let shortImage = "No image";
+    if (p.image_url) shortImage = await shortenURL(p.image_url);
+
+    lines.push(
+      `${i + 1}. *${p.name}*\nQty: ${p.qty}\nPrice: ₹${discountedPrice}\nSubtotal: ₹${subtotal}\nImage: ${shortImage}`
+    );
+  }
+
+  const gst = Math.round(total * 0.05);
+  const grand = total + gst;
+
+  // Check if total + GST is below 5000
+  if (grand < 5000) {
+    alert( "The total of your selected items is below ₹5,000. Kindly add more products to reach the minimum order value.");
+    return;
+  }
+
+  const message = `🛍️ *Order Details*\n\n${lines.join("\n\n")}\n\n--------------------\nTotal: ₹${total}\nGST(5%): ₹${gst}\nGrand Total: ₹${grand}\nPlease Send this message to Confirm your order.`;
+
   setTimeout(() => {
     window.location.href = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
     setPreparing(false); // hide popup after redirect
   }, 100);
-  };
+};
 
   const ShimmerCard = () => (
     <div className="animate-pulse bg-white rounded-2xl shadow p-3 flex flex-col items-center">
@@ -341,46 +450,51 @@ async function fetchWhatsappNumber() {
       
 
       
-        <div className="max-w-6xl mx-auto flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Image
-              src="https://oscosxtqmegjdcgzbdko.supabase.co/storage/v1/object/public/product-images/product-1762957690479-Logo3.png"
-              alt="Logo"
-              width={50}
-              height={50}
-            />
-            <div>
-              <h2 className="text-xl font-bold">J K Sarees</h2>
-              <p className="text-xs text-gray-500 leading-tight">
-                21-1-601, Beside 94 Bus Stop, High Court Road, Hyderabad
-              </p>
-              <p className="text-xm text-gray-500 ">📞 9246226011</p>
-            </div>
+       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center sm:justify-between gap-4 p-4">
+  
+        {/* Logo + Title */}
+        <div className="flex items-center gap-3">
+          <Image
+            src="https://oscosxtqmegjdcgzbdko.supabase.co/storage/v1/object/public/product-images/product-1762957690479-Logo3.png"
+            alt="Logo"
+            width={60}
+            height={60}
+            className="sm:w-[80px] sm:h-[80px]"
+          />
+
+          <div>
+            <h2 className="text-4xl sm:text-6xl font-bold text-center sm:text-left">
+              J K Sarees
+            </h2>
           </div>
         </div>
 
+        {/* Locate Us Button */}
+        <button
+          onClick={() =>
+            window.open(
+              "https://www.google.com/maps/place/J+K+Sarees+Cotton+Company/",
+              "_blank"
+            )
+          }
+          className="flex items-center gap-2 justify-center border border-black bg-white text-black px-4 py-2 rounded-lg hover:bg-black hover:text-white text-sm w-full sm:w-auto"
+        >
+          <img
+            src="https://oscosxtqmegjdcgzbdko.supabase.co/storage/v1/object/public/product-images/icons8-place-marker-24.png"
+            alt="Location"
+            className="w-5 h-5"
+          />
+          Locate Us
+        </button>
+
+      </div>
+
          <div className="flex items-center justify-between max-w-6xl mx-auto p-4">
 
-            <button
-            onClick={() =>
-              window.open(
-                "https://www.google.com/maps/place/J+K+Sarees+Cotton+Company/@17.367972,78.4712925,17z/data=!3m1!4b1!4m6!3m5!1s0x3bcb97e55963cf01:0x6db6f1b02043e7c0!8m2!3d17.3679669!4d78.4738674!16s%2Fg%2F11g0hy52s1?entry=ttu&g_ep=EgoyMDI1MTExMi4wIKXMDSoASAFQAw%3D%3D",
-                "_blank"
-              )
-            }
-            className="flex items-center justify-center border-1 border-black bg-white-600 text-black px-4 py-2 rounded-lg hover:bg-black-700 text-sm min-w-[110px]"
-          >
-             <img
-                src="https://oscosxtqmegjdcgzbdko.supabase.co/storage/v1/object/public/product-images/icons8-place-marker-24.png"
-                alt="Location"
-                className="w-5 h-5"
-              />
-            Location
-          </button>
-          
-            <Link href="/admin/login" className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">
+           
+            {/* <Link href="/admin/login" className="bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 text-sm">
               Admin
-            </Link>
+            </Link> */}
 
             {cart.length > 0 && (
               <button onClick={() => setShowCart(true)} className="relative flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-lg min-w-[110px]">
@@ -402,11 +516,30 @@ async function fetchWhatsappNumber() {
           <div className="flex items-center gap-3 w-full md:w-2/3">
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search product..." className="w-full md:w-2/3 border p-2 rounded-lg shadow-sm" />
 
-            <select value={sortOption} onChange={(e) => setSortOption(e.target.value)} className="border p-2 rounded-lg bg-white">
-              <option value="default">Sort By</option>
-              <option value="price-low">Price — Low to High</option>
-              <option value="price-high">Price — High to Low</option>
-            </select>
+           <select
+            value={sortOption}
+            onChange={(e) => {
+              setSortOption(e.target.value);
+              setPage(1);
+            }}
+            className="border p-2 rounded-lg bg-white"
+          >
+            <option value="default">Sort By</option>
+
+            {/* Sorting */}
+            <option value="price-low">Price — Low to High</option>
+            <option value="price-high">Price — High to Low</option>
+
+            {/* Price Ranges */}
+            <option value="range-0-200">₹0 – ₹200</option>
+            <option value="range-200-400">₹200 – ₹400</option>
+            <option value="range-400-700">₹400 – ₹700</option>
+            <option value="range-700-1000">₹700 – ₹1000</option>
+            <option value="range-1000-2000">₹1000 – ₹2000</option>
+            <option value="offer">🔥 Offers</option>
+
+          </select>
+
           </div>
 
           <div className="text-sm text-gray-600">
@@ -493,7 +626,7 @@ async function fetchWhatsappNumber() {
 
       {/* Pagination */}
       {!loading && totalItems > 0 && (
-        <div className="max-w-6xl mx-auto p-4">
+        <div className="max-w-8xl mx-auto p-4">
            <div className="flex items-center justify-center gap-2 overflow-x-auto whitespace-nowrap py-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="px-2 py-0.5 text-[10px] rounded border bg-white shrink-0">
             Prev
@@ -502,7 +635,7 @@ async function fetchWhatsappNumber() {
           {Array.from({ length: totalPages }).map((_, i) => {
             const n = i + 1;
             return (
-              <button key={n} onClick={() => setPage(n)} className={`px-1.5 py-0.5 rounded ${n === page ? "bg-gray-800 text-white" : "border"}`}>
+              <button key={n} onClick={() => setPage(n)} className={`px-2 py-0.5 rounded ${n === page ? "bg-gray-800 text-white" : "border"}`}>
                 {n}
               </button>
             );
@@ -588,6 +721,213 @@ async function fetchWhatsappNumber() {
           </div>
         </div>
       )}
+
+      <>
+      <footer className="bg-gray-900 text-gray-300 mt-12">
+        <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+
+          {/* Shop Info */}
+          <div>
+            <h3 className="text-xl font-semibold text-white mb-3">J K Sarees</h3>
+
+            <div className="flex items-start gap-2 text-sm text-gray-400 mb-4">
+              <MapPinIcon className="h-5 w-5 text-pink-500" />
+              <p>
+                #21-1-601, Cellar, Beside 94 Bus Stop,<br />
+                Gate No.4 High Court Road,<br />
+                Hyderabad – 500002
+              </p>
+            </div>
+
+            <div className="flex items-start gap-2 text-sm text-gray-400">
+              <MapPinIcon className="h-5 w-5 text-pink-500" />
+              <p>
+                #21-1-635, 1st Floor, God Gift Market,<br />
+                Rikab Gunj, Hyderabad – 500002
+              </p>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-3">Contact</h3>
+
+            <a href="tel:+919246226011" className="flex items-center gap-2 text-sm hover:text-white mb-2">
+              <PhoneIcon className="h-5 w-5 text-green-500" />
+              +91 92462 26011
+            </a>
+
+            <a href="tel:+918500233392" className="flex items-center gap-2 text-sm hover:text-white mb-2">
+              <PhoneIcon className="h-5 w-5 text-green-500" />
+              +91 85002 33392
+            </a>
+
+            <a href="tel:+918121256011" className="flex items-center gap-2 text-sm hover:text-white mb-2">
+              <PhoneIcon className="h-5 w-5 text-green-500" />
+              +91 81212 56011
+            </a>
+
+             <a href="mailto:jksarees9246@gmail.com" className="flex items-center gap-2 text-sm hover:text-white mb-2">
+              <EnvelopeIcon className="h-5 w-5 text-green-500" />
+              jksarees9246@gmail.com
+            </a>
+
+            {/* <div className="flex items-center gap-2 text-sm">
+              <EnvelopeIcon className="h-5 w-5 text-blue-400" />
+              jksarees9246@gmail.com
+            </div> */}
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-3">Quick Links</h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/" className="hover:text-white">Home</Link>
+              </li>
+              <li>
+                <Link href="/admin/login" className="hover:text-white">Admin</Link>
+              </li>
+              <li>
+                <a
+                  href="https://www.google.com/maps/place/J+K+Sarees+Cotton+Company"
+                  target="_blank"
+                  className="hover:text-white"
+                >
+                  Locate Us
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Social */}
+          <div>
+            <h3 className="text-lg font-semibold text-white mb-3">Follow Us</h3>
+           <div className="flex gap-4">
+              <a href="https://www.instagram.com/j_k_sarees" target="_blank">
+                <FaInstagram className="h-7 w-7 text-pink-500 hover:scale-110 transition" />
+              </a>
+
+              <a href="https://www.facebook.com/JKSarees9246" target="_blank">
+                <FaFacebook className="h-7 w-7 text-blue-500 hover:scale-110 transition" />
+              </a>
+
+              <a href="https://wa.me/919246226011" target="_blank">
+                <FaWhatsapp className="h-7 w-7 text-green-500 hover:scale-110 transition" />
+              </a>
+
+              <a href="https://www.youtube.com/@jksareescottoncompany6011" target="_blank">
+                <FaYoutube className="h-7 w-7 text-red-500 hover:scale-110 transition" />
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Policies */}
+        <div className="border-t border-gray-700 py-4 text-center text-sm">
+          <button onClick={() => setOpenModal("terms")} className="mx-2 hover:text-white">
+            Terms & Conditions
+          </button>
+          |
+          <button onClick={() => setOpenModal("privacy")} className="mx-2 hover:text-white">
+            Privacy Policy
+          </button>
+        </div>
+
+        <div className="text-center text-xs text-gray-400 pb-4">
+          © {new Date().getFullYear()} J K Sarees. All rights reserved.
+        </div>
+      </footer>
+
+      {/* Modal */}
+      {openModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-lg max-w-lg w-full p-6 relative">
+            <button
+              onClick={() => setOpenModal(null)}
+              className="absolute top-3 right-3"
+            >
+              <XMarkIcon className="h-6 w-6 text-gray-600" />
+            </button>
+
+            <h2 className="text-xl font-semibold mb-3">
+              {openModal === "terms" ? "Terms & Conditions" : "Privacy Policy"}
+            </h2>
+
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {openModal === "terms" ? (
+            <>
+              1. This website operates as a wholesaler and manufacturer of cotton sarees
+              and fancy synthetic sarees. Sales are primarily intended for wholesale and bulk buyers.
+              <br />
+              2. Product images, colors, designs, and descriptions are provided for reference. Slight variations in color,
+              weave, or design may occur due to lighting, screen resolution, or manufacturing processes.
+              <br />
+              3. All prices listed are subject to change without prior notice. Prices may vary based on quantity,
+              customization, or market conditions.
+                <br />
+              4. Orders are considered confirmed only after payment is received or mutually agreed terms are finalized.
+                <br />
+              5. Certain products may have a minimum order quantity requirement, which will be communicated before order confirmation.
+                <br />
+              6. Payments must be made through approved payment methods. Orders will not be dispatched until payment is successfully completed.
+                <br />
+              7.  Customers must provide a complete and correct delivery/booking address, including name, contact number, and pin code, at the time of order confirmation.
+                <br />
+              8. Returns or exchanges are accepted only in case of manufacturing defects, subject to inspection and prior approval.
+                <br />
+              9. All designs, images, logos, and content on this website are the property of the company and may not be copied or reused without permission.
+                <br />
+              10. Parcels are booked strictly as per the address and details provided by the customer. Any mistake in address or contact details will be the sole responsibility of the customer.
+
+            </>
+          ) : (
+            <>
+            1. We collect basic information such as name, phone number, email address, business details, and shipping address to process orders.
+              <br />
+
+            
+            2. Customer information is used only for order processing, communication, billing, delivery, and customer support.
+
+            
+            3. We take reasonable security measures to protect customer data from unauthorized access, misuse, or disclosure.
+              <br />
+
+            
+            4. We do not sell, rent, or trade customer personal information to third parties.
+              <br />
+
+            
+            5. Customer data may be shared with trusted logistics, payment gateways, or service providers only to fulfill business operations.
+              <br />
+
+            
+            6. Our website may use cookies to improve user experience, analyze traffic, and enhance website functionality.
+              <br />
+
+            
+            7. Payment details are processed through secure payment gateways. We do not store sensitive payment information.
+              <br />
+
+            
+            8. We may contact customers regarding orders, inquiries, offers, or updates related to our products and services.
+              <br />
+
+            
+            9. Customers are responsible for providing accurate and up-to-date information while placing orders.
+              <br />
+
+            
+            10. This Privacy Policy may be updated from time to time. Continued use of the website indicates acceptance of the revised policy.
+            </>
+
+          )}
+            </p>
+          </div>
+        </div>
+      )}
+    </>
 
     </div>
   );
