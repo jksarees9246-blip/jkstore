@@ -460,6 +460,7 @@ async function fetchWhatsappNumber() {
             width={60}
             height={60}
             className="sm:w-[80px] sm:h-[80px]"
+            loading="lazy"
           />
 
           <div>
@@ -473,9 +474,9 @@ async function fetchWhatsappNumber() {
         <button
           onClick={() =>
             window.open(
-              "https://www.google.com/maps/place/J+K+Sarees+Cotton+Company/",
-              "_blank"
-            )
+                     "https://www.google.com/maps/search/?api=1&query=J+K+Sarees+Cotton+Company, Hyderabad, Telangana",
+                    "_blank"     
+                         )
           }
           className="flex items-center gap-2 justify-center border border-black bg-white text-black px-4 py-2 rounded-lg hover:bg-black hover:text-white text-sm w-full sm:w-auto"
         >
@@ -483,6 +484,7 @@ async function fetchWhatsappNumber() {
             src="https://oscosxtqmegjdcgzbdko.supabase.co/storage/v1/object/public/product-images/icons8-place-marker-24.png"
             alt="Location"
             className="w-5 h-5"
+            loading="lazy"
           />
           Locate Us
         </button>
@@ -570,7 +572,9 @@ async function fetchWhatsappNumber() {
       </div>
 
       {/* Product Grid */}
-      <main className="max-w-6xl mx-auto p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      {/* <main className="max-w-6xl mx-auto p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"> */}
+        <main className="max-w-6xl mx-auto p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+
         {loading
           ? Array.from({ length: PAGE_SIZE }).map((_, i) => <ShimmerCard key={i} />)
           : paginated.map((p) => {
@@ -580,8 +584,21 @@ async function fetchWhatsappNumber() {
 
               return (
                 <div key={p.id} className="bg-white rounded-2xl shadow hover:shadow-md transition p-3 flex flex-col items-center relative">
-                  <div className="w-full h-40 rounded-lg overflow-hidden mb-2">
-                    <img src={p.image_url || "/no-image.png"} alt={p.name} className="w-full h-full object-cover cursor-pointer" onClick={() => setSelectedImage(p.image_url || null)} />
+                  {/* <div className="w-full h-40 rounded-lg overflow-hidden mb-2"> */}
+                <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden mb-2">
+
+                    {/* <img src={p.image_url || "/no-image.png"} alt={p.name} className="w-full h-full object-cover cursor-pointer" onClick={() => setSelectedImage(p.image_url || null)}   loading="lazy"/> */}
+                 <Image
+                    src={p.image_url || "/no-image.png"}
+                    alt={p.name}
+                    // width={300}
+                    // height={300}
+                    fill
+                    className="object-cover cursor-pointer"
+                    loading="lazy"
+                    onClick={() => setSelectedImage(p.image_url || null)}
+                  />
+
                   </div>
 
                   <h3 className="font-semibold text-center truncate w-full">{p.name}</h3>
@@ -667,7 +684,17 @@ async function fetchWhatsappNumber() {
       {/* Image Modal */}
       {selectedImage && (
         <div onClick={() => setSelectedImage(null)} className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-40">
-          <img src={selectedImage} alt="Full" className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-lg" />
+          {/* <img src={selectedImage} alt="Full" className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-lg"   loading="lazy" /> */}
+          {selectedImage && (
+            <Image
+              src={selectedImage}
+              alt="Full"
+              width={800}
+              height={800}
+              className="max-h-[90vh] max-w-[90vw] rounded-lg"
+            />
+          )}
+
         </div>
       )}
 
@@ -790,8 +817,9 @@ async function fetchWhatsappNumber() {
               </li>
               <li>
                 <a
-                  href="https://www.google.com/maps/place/J+K+Sarees+Cotton+Company"
+                  href="https://www.google.com/maps/search/?api=1&query=J+K+Sarees+Cotton+Company, Hyderabad, Telangana"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-white"
                 >
                   Locate Us

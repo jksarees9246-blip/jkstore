@@ -11,7 +11,7 @@ interface Product {
   price: number;
   image_url?: string | null;
   min_qty?: number | null;
-  category?: string | null;
+  category?: string | null; 
   // rating removed
   discount_percent?: number | null;
   // offer_text removed
@@ -35,7 +35,7 @@ export default function AdminDashboard() {
   const [editId, setEditId] = useState<number | null>(null);
 
   // offer/discount (kept discount_percent)
-  const [discountPercent, setDiscountPercent] = useState("");
+  const [, setDiscountPercent] = useState("");
   const [discountAmount, setDiscountAmount] = useState("");
   const [discountEnabled, setdiscountEnabled] = useState<boolean>(false);
 
@@ -49,8 +49,9 @@ export default function AdminDashboard() {
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [showWhatsappInput, setShowWhatsappInput] = useState(false);
   const [isWhatsappSaved, setIsWhatsappSaved] = useState(false);
+  const [search, setSearch] = useState("");
+  const formRef = useRef<HTMLDivElement | null>(null);
   
-const formRef = useRef<HTMLDivElement | null>(null);
 
 
   useEffect(() => {
@@ -93,6 +94,22 @@ const formRef = useRef<HTMLDivElement | null>(null);
 
     return true;
   }
+
+  const filteredProducts = products.filter((p) => {
+  const searchText = search.toLowerCase();
+
+  const nameMatch = p.name?.toLowerCase().includes(searchText);
+
+  const priceMatch =
+    String(p.price).includes(searchText) ||
+    (p.discount_percent &&
+      String(
+        Math.round(p.price - (p.price * p.discount_percent) / 100)
+      ).includes(searchText));
+
+  return nameMatch || priceMatch;
+});
+
 
   // async function uploadImage(): Promise<string> {
   //   if (!imageFile) return "";
@@ -663,14 +680,29 @@ async function saveWhatsappNumber() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="🔍 Search by name or price..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="border p-3 rounded-lg w-full md:w-96"
+        />
+      </div>
+  
+
       {/* Product List */}
       <h2 className="font-semibold text-lg mb-4 text-gray-700">📦 Products</h2>
 
-      {products.length === 0 ? (
+      {/* {products.length === 0 ? ( */}
+      {filteredProducts.length === 0 ? (
         <p className="text-gray-500">No products found.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((p) => (
+          {/* {products.map((p) => ( */}
+          {filteredProducts.map((p) => (
+
             <div key={p.id} className="border rounded-xl bg-white p-4 shadow hover:shadow-lg transition">
               <Image src={p.image_url || "/no-image.png"} alt={p.name} width={250} height={250} className="rounded-lg w-full h-48 object-cover" />
 
