@@ -38,13 +38,27 @@ export default function InvoicePage() {
           key={i}
           className="flex items-center gap-4 border-b py-3"
         >
-          <Image
+          {/* <Image
             src={item.image}
             width={80}
             height={100}
             alt={item.name}
             className="rounded"
-          />
+          /> */}
+
+          <Image
+          src={
+            item.image && item.image.length > 0
+              ? item.image[0]
+              : "/no-image.png"
+          }
+          alt={item.name}
+          width={80}
+          height={100}
+          className="rounded"
+          style={{ width: "100%", height: "auto" }} // ✅ fix
+
+        />
 
           <div className="flex-1">
             <p className="font-semibold">{item.name}</p>
